@@ -1,0 +1,24 @@
+{
+  "name": "workers",
+  "version": "1.0.0",
+  "description": "",
+  "main": "order.worker.ts",
+  "scripts": {
+    "dev": "ts-node order.worker.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bullmq": "^5.79.0",
+    "ioredis": "^5.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}
