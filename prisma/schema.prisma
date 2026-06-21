@@ -8,6 +8,11 @@ generator client {
   output = "../api/node_modules/.prisma/client"
 }
 
+generator clientWorkers {
+    provider = "prisma-client-js"
+    output   = "../workers/node_modules/.prisma/client"
+  }
+
 model Order {
   id         String      @id @default(cuid())
   customerId String
