@@ -33,14 +33,24 @@ worker.on('completed', (job: Job) => {
 });
 
 worker.on('failed', async (job: Job | undefined, err: Error) => {
-  console.error(`Job ${job?.id} failed:`, err.message);
-  await prisma.order.update({
-    where: { id: job?.data.orderId },
-    data: { status: 'FAILED' },
-  });
+  // only update DB on the final failure
+  if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+    console.error(`Job ${job.id} permanently failed:`,
+err.message);
+    await prisma.order.update({
+      where: { id: job.data.orderId },
+      data: { status: 'FAILED' },
+    });
+  } else {
+    console.warn(`Job ${job?.id} failed attempt
+${job?.attemptsMade}, retrying...`);
+  }
 });
 
 async function sendConfirmationEmail(orderId: string) {
+  if (Math.random() < 0.3) {
+    throw new Error('Email service unavailable');
+  }
   console.log(`[Email] Sending confirmation for order ${orderId}...`);
   await new Promise((resolve) => setTimeout(resolve, 500));
   console.log(`[Email] Confirmation sent for order ${orderId}`);
