@@ -11,17 +11,19 @@ const connection = {
 const worker = new Worker(
   'order-processing',
   async (job: Job) => {
-    console.log(`Processing order: ${job.data.orderId}`);
-    await prisma.order.update({
-      where: { id: job.data.orderId },
-      data: { status: 'PROCESSING' },
-    });
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await prisma.order.update({
-      where: { id: job.data.orderId },
-      data: { status: 'COMPLETED' },
-    });
-    console.log(`Order ${job.data.orderId} processed`);
+    const { orderId } = job.data;
+    console.log(`Processing order: ${orderId}`);
+    await prisma.order.update({ where: { id: orderId }, data: {
+  status: 'PROCESSING' } });
+    await Promise.all([
+      sendConfirmationEmail(orderId),
+      generateInvoice(orderId),
+      updateAnalytics(orderId),
+      notifyWarehouse(orderId),
+    ]);
+    await prisma.order.update({ where: { id: orderId }, data: {
+  status: 'COMPLETED' } });
+    console.log(`Order ${orderId} completed`);
   },
   { connection }
 );
@@ -37,3 +39,26 @@ worker.on('failed', async (job: Job | undefined, err: Error) => {
     data: { status: 'FAILED' },
   });
 });
+
+async function sendConfirmationEmail(orderId: string) {
+  console.log(`[Email] Sending confirmation for order ${orderId}...`);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  console.log(`[Email] Confirmation sent for order ${orderId}`);
+}
+async function generateInvoice(orderId: string) {
+  console.log(`[Invoice] Generating invoice for order ${orderId}...`);
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  console.log(`[Invoice] Invoice generated for order ${orderId}`);
+}
+async function updateAnalytics(orderId: string) {
+  console.log(`[Analytics] Updating analytics for order ${orderId}...`);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  console.log(`[Analytics] Analytics updated for order
+${orderId}`);
+}
+async function notifyWarehouse(orderId: string) {
+  console.log(`[Warehouse] Notifying warehouse for order ${orderId}...`);
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  console.log(`[Warehouse] Warehouse notified for order
+${orderId}`);
+}

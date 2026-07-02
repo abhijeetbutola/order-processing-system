@@ -4,7 +4,7 @@
   "description": "",
   "main": "order.worker.ts",
   "scripts": {
-    "dev": "ts-node order.worker.ts"
+    "dev": "node -r ts-node/register order.worker.ts"
   },
   "keywords": [],
   "author": "",
