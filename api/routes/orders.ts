@@ -13,9 +13,17 @@ router.post("/", async (req, res) => {
         data: { customerId, items, total }
     })
     // enqueue job
-    await orderQueue.add('process-order', { orderId: order.id }, {priority})
-    await orderQueue.add('payment-reminder', { orderId: order.id }, {delay: 10000})
-    res.status(202).json({ orderId: order.id, status: order.status })
+    const processJob = await orderQueue.add('process-order', { orderId: order.id }, { priority })
+    await orderQueue.add('payment-reminder', { orderId: order.id }, { delay: 10000 })
+    res.status(202).json({ orderId: order.id, jobId: processJob.id, status: order.status })
+})
+
+router.get("/job/:jobId/progress", async (req, res) => {
+    const job = await orderQueue.getJob(req.params.jobId);
+    if (!job) {
+        return res.status(404).json({ error: 'Job not found' });
+    }
+    res.json({ jobId: req.params.jobId, progress: job.progress });
 })
 
 export default router;
