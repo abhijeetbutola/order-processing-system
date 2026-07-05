@@ -13,6 +13,11 @@ generator clientWorkers {
     output   = "../workers/node_modules/.prisma/client"
   }
 
+generator clientPrisma {
+  provider = "prisma-client-js"
+  output   = "./node_modules/.prisma/client"
+}
+
 model Order {
   id         String      @id @default(cuid())
   customerId String
@@ -21,6 +26,10 @@ model Order {
   status     OrderStatus @default(PENDING)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+  emailSentAt            DateTime?
+  invoiceGeneratedAt     DateTime?
+  analyticsUpdatedAt     DateTime?
+  warehouseNotifiedAt    DateTime?
 }
 
 enum OrderStatus {
