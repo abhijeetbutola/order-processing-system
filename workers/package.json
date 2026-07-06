@@ -4,12 +4,13 @@
   "description": "",
   "main": "order.worker.ts",
   "scripts": {
-    "dev": "concurrently \"node -r ts-node/register order.worker.ts\" \"node -r ts-node/register email.worker.ts\" \"node -r ts-node/register pdf.worker.ts\" \"node -r ts-node/register analytics.worker.ts\" \"node -r ts-node/register warehouse.worker.ts\"",
-    "dev:order": "node -r ts-node/register order.worker.ts",
-    "dev:email": "node -r ts-node/register email.worker.ts",
-    "dev:pdf": "node -r ts-node/register pdf.worker.ts",
-    "dev:analytics": "node -r ts-node/register analytics.worker.ts",
-    "dev:warehouse": "node -r ts-node/register warehouse.worker.ts",
+    "dev": "concurrently \"node -r ts-node/register -r tsconfig-paths/register order.worker.ts\" \"node -r ts-node/register -r tsconfig-paths/register email.worker.ts\" \"node -r ts-node/register -r tsconfig-paths/register pdf.worker.ts\" \"node -r ts-node/register -r tsconfig-paths/register analytics.worker.ts\" \"node -r ts-node/register -r tsconfig-paths/register warehouse.worker.ts\" \"node -r ts-node/register -r tsconfig-paths/register notification.worker.ts\"",
+    "dev:order": "node -r ts-node/register -r tsconfig-paths/register order.worker.ts",
+    "dev:email": "node -r ts-node/register -r tsconfig-paths/register email.worker.ts",
+    "dev:pdf": "node -r ts-node/register -r tsconfig-paths/register pdf.worker.ts",
+    "dev:analytics": "node -r ts-node/register -r tsconfig-paths/register analytics.worker.ts",
+    "dev:warehouse": "node -r ts-node/register -r tsconfig-paths/register warehouse.worker.ts",
+    "dev:notification": "node -r ts-node/register -r tsconfig-paths/register notification.worker.ts",
     "postinstall": "prisma generate --schema=../prisma/schema.prisma"
   },
   "keywords": [],
@@ -27,6 +28,7 @@
     "concurrently": "^10.0.3",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.0.0"
   }
 }

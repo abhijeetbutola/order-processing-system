@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import { Worker, Job } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
-import { connection } from '../shared/queues/connection';
+import { connection } from '@shared/queues/connection';
+import { checkOrderCompletion } from '@shared/utils/checkOrderCompletion';
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,7 @@ const worker = new Worker(
         await new Promise((resolve) => setTimeout(resolve, 600));
         await prisma.order.update({ where: { id: orderId }, data: { warehouseNotifiedAt: new Date() } });
         console.log(`[Warehouse] Warehouse notified for order ${orderId}`);
+        await checkOrderCompletion(prisma, orderId, 'Warehouse');
         break;
 
       default:
@@ -34,6 +36,10 @@ const worker = new Worker(
 );
 
 worker.on('completed', (job: Job) => console.log(`[Warehouse] Job ${job.id} completed`));
-worker.on('failed', (job: Job | undefined, err: Error) => {
-  console.error(`[Warehouse] Job ${job?.id} failed:`, err.message);
+worker.on('failed', async (job: Job | undefined, err: Error) => {
+  if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+    console.error(`[Warehouse] Job ${job.id} permanently failed:`, err.message);
+    await prisma.order.update({ where: { id: job.data.orderId }, data: { status: 'FAILED' } });
+  }
 });
+

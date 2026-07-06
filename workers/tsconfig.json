@@ -5,7 +5,8 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "@prisma/client": ["node_modules/@prisma/client"]
+      "@prisma/client": ["node_modules/@prisma/client"],
+      "@shared/*": ["../shared/*"]
     },
     "outDir": "./dist",
     "strict": true,

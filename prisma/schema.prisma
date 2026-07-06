@@ -18,6 +18,11 @@ generator clientPrisma {
   output   = "./node_modules/.prisma/client"
 }
 
+generator clientShared {
+  provider = "prisma-client-js"
+  output   = "../shared/node_modules/.prisma/client"
+}
+
 model Order {
   id         String      @id @default(cuid())
   customerId String

@@ -5,11 +5,12 @@ import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { orderQueue } from './queues/orderQueue';
-import { emailQueue } from '../shared/queues/emailQueue';
-import { pdfQueue } from '../shared/queues/pdfQueue';
-import { analyticsQueue } from '../shared/queues/analyticsQueue';
-import { warehouseQueue } from '../shared/queues/warehouseQueue';
-import { deadLetterQueue } from '../shared/queues/deadLetterQueue';
+import { emailQueue } from '@shared/queues/emailQueue';
+import { pdfQueue } from '@shared/queues/pdfQueue';
+import { analyticsQueue } from '@shared/queues/analyticsQueue';
+import { warehouseQueue } from '@shared/queues/warehouseQueue';
+import { deadLetterQueue } from '@shared/queues/deadLetterQueue';
+import { notificationQueue } from '@shared/queues/notificationQueue';
 
 const app = express();
 
@@ -24,6 +25,7 @@ createBullBoard({
     new BullMQAdapter(pdfQueue),
     new BullMQAdapter(analyticsQueue),
     new BullMQAdapter(warehouseQueue),
+    new BullMQAdapter(notificationQueue),
     new BullMQAdapter(deadLetterQueue),
   ],
   serverAdapter,

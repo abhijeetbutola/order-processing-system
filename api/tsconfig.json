@@ -11,7 +11,8 @@
     "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
-      "bullmq": ["node_modules/bullmq"]
+      "bullmq": ["node_modules/bullmq"],
+      "@shared/*": ["../shared/*"]
     },
     // "types": [],
     // For nodejs:

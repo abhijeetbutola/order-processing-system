@@ -1,10 +1,11 @@
 import 'dotenv/config';
 import { Worker, Job } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
-import { emailQueue } from '../shared/queues/emailQueue';
-import { pdfQueue } from '../shared/queues/pdfQueue';
-import { analyticsQueue } from '../shared/queues/analyticsQueue';
-import { warehouseQueue } from '../shared/queues/warehouseQueue';
+import { emailQueue } from '@shared/queues/emailQueue';
+import { pdfQueue } from '@shared/queues/pdfQueue';
+import { analyticsQueue } from '@shared/queues/analyticsQueue';
+import { warehouseQueue } from '@shared/queues/warehouseQueue';
+import { notificationQueue } from '@shared/queues/notificationQueue';
 
 const prisma = new PrismaClient();
 
@@ -27,17 +28,10 @@ const worker = new Worker(
           pdfQueue.add('generate-invoice', { orderId }),
           analyticsQueue.add('update-analytics', { orderId }),
           warehouseQueue.add('notify-warehouse', { orderId }),
+          notificationQueue.add('payment-reminder', { orderId }, { delay: 10000 }),
         ]);
-        await job.updateProgress(80);
-        await prisma.order.update({ where: { id: orderId }, data: { status: 'COMPLETED' } });
         await job.updateProgress(100);
-        console.log(`Order ${orderId} orchestrated`);
-        break;
-
-      case 'payment-reminder':
-        console.log(`[Reminder] Sending payment reminder for order ${orderId}`);
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        console.log(`[Reminder] Payment reminder sent for order ${orderId}`);
+        console.log(`Order ${orderId} orchestrated — sub-tasks enqueued`);
         break;
 
       default:

@@ -4,9 +4,9 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "node -r ts-node/register server.ts",
+    "dev": "node -r ts-node/register -r tsconfig-paths/register server.ts",
     "build": "tsc",
-    "start": "node dist/api/server.js",,
+    "start": "node dist/api/server.js",
     "postinstall": "prisma generate --schema=../prisma/schema.prisma"
   },
   "keywords": [],
@@ -27,6 +27,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^20.0.0",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.0.0"
   }
 }
