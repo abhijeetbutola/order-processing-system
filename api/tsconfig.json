@@ -2,7 +2,6 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDir": "./",
     "outDir": "./dist",
 
     // Environment Settings
@@ -10,6 +9,10 @@
     "module": "commonjs",
     "target": "ES2020",
     "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "bullmq": ["node_modules/bullmq"]
+    },
     // "types": [],
     // For nodejs:
     // "lib": ["esnext"],
@@ -42,6 +45,6 @@
     // "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "../shared/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

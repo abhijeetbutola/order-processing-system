@@ -4,7 +4,13 @@
   "description": "",
   "main": "order.worker.ts",
   "scripts": {
-    "dev": "node -r ts-node/register order.worker.ts"
+    "dev": "concurrently \"node -r ts-node/register order.worker.ts\" \"node -r ts-node/register email.worker.ts\" \"node -r ts-node/register pdf.worker.ts\" \"node -r ts-node/register analytics.worker.ts\" \"node -r ts-node/register warehouse.worker.ts\"",
+    "dev:order": "node -r ts-node/register order.worker.ts",
+    "dev:email": "node -r ts-node/register email.worker.ts",
+    "dev:pdf": "node -r ts-node/register pdf.worker.ts",
+    "dev:analytics": "node -r ts-node/register analytics.worker.ts",
+    "dev:warehouse": "node -r ts-node/register warehouse.worker.ts",
+    "postinstall": "prisma generate --schema=../prisma/schema.prisma"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "concurrently": "^10.0.3",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.0.0"

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node -r ts-node/register server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/api/server.js",,
+    "postinstall": "prisma generate --schema=../prisma/schema.prisma"
   },
   "keywords": [],
   "author": "",
