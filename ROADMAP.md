@@ -139,4 +139,267 @@ That's exactly the problem RabbitMQ solves. At that point it won't feel like a n
 - [x] Order worker (basic — receive job, update DB status)
 - [x] Prisma v5 integration in API and workers
 - [x] TypeScript in both `api/` and `workers/`
-- [ ] Phase 1 — Realistic worker
+- [x] Phase 1 — Realistic worker
+- [x] Phase 2 — Failures + Retries
+- [x] Phase 3 — Bull Board
+- [x] Phase 4 — Multiple Worker Processes
+- [x] Phase 5 — Priority Jobs
+- [x] Phase 6 — Delayed Jobs
+- [x] Phase 7 — Job Progress Reporting
+- [x] Phase 8 — Idempotency
+- [x] Phase 9 — Multiple Queues + Dead Letter Queues
+- [x] Phase 10 — Throughput Experiment
+- [ ] Phase 11 — RabbitMQ Migration (see below)
+
+---
+
+# Part 2: RabbitMQ
+
+> Create a new git branch before starting: `git checkout -b rabbitmq`
+>
+> You are migrating the same order processing system from BullMQ/Redis to RabbitMQ.
+> The domain stays the same — only the messaging layer changes.
+
+**Key mindset shift:** BullMQ is a job queue (tasks to be done). RabbitMQ is a message broker (events that happened). Workers become independent services that react to events.
+
+**Node.js library:** `amqplib` (low-level) or `amqp-connection-manager` (recommended — handles reconnects automatically).
+
+---
+
+## Phase 11: Install RabbitMQ + Explore the Management UI
+
+Get RabbitMQ running and get familiar with its concepts visually before writing any code.
+
+- [ ] Run RabbitMQ via Docker:
+  ```
+  docker run -d \
+    --hostname rabbitmq \
+    --name rabbitmq \
+    -p 5672:5672 \
+    -p 15672:15672 \
+    rabbitmq:3-management
+  ```
+- [ ] Open the management UI at `http://localhost:15672` (guest / guest)
+- [ ] Explore the **Exchanges**, **Queues**, and **Connections** tabs (they'll be empty — that's fine)
+- [ ] Install `amqplib` and `@types/amqplib` in the project
+- [ ] Write a minimal publisher script that connects to RabbitMQ and publishes one message to the default exchange
+- [ ] Write a minimal consumer script that reads and logs that message
+
+> Goal: understand the basic publish/consume cycle. Notice you must explicitly **acknowledge** (ack) a message — RabbitMQ will redeliver it if you don't. BullMQ handled this automatically.
+
+---
+
+## Phase 12: One Exchange → One Queue → One Consumer
+
+Replicate the simplest version of your order flow in RabbitMQ.
+
+- [ ] Create a `direct` exchange named `orders`
+- [ ] Create a queue named `order-processing` and bind it to the exchange with routing key `order.created`
+- [ ] When `POST /orders` is called, publish a message to the `orders` exchange with routing key `order.created`
+- [ ] Create a consumer that reads from `order-processing` and logs the order details
+- [ ] Confirm the message appears and disappears in the RabbitMQ UI when consumed
+
+> Goal: this will look almost identical to your BullMQ setup. That's intentional — feel the similarity before the differences emerge.
+
+---
+
+## Phase 13: Fan-Out to Multiple Services
+
+Add more queues so one published event reaches multiple independent consumers.
+
+- [ ] Create an `inventory` queue bound to `orders` exchange with routing key `order.created`
+- [ ] Create a consumer (inventory service) that processes inventory updates
+- [ ] Add an `email` queue bound to the same exchange with the same routing key
+- [ ] Create a consumer (email service) that sends confirmation emails
+- [ ] Publish one order and observe **both consumers** receiving and processing it independently
+
+> Goal: this is the "aha moment" — one publish, two services react, zero code change in the order publisher. This is why RabbitMQ exists.
+
+---
+
+## Phase 14: Complete Fan-Out (All Sub-Services)
+
+Mirror the full architecture you built in Phase 9, now using RabbitMQ.
+
+- [ ] Add `analytics` queue and consumer
+- [ ] Add `warehouse` queue and consumer
+- [ ] Add `notification` queue and consumer (for payment reminders)
+- [ ] Verify all 5 consumers receive the event when an order is created
+- [ ] Confirm each service processes independently without blocking the others
+
+> Goal: your Phase 9 architecture, rebuilt on RabbitMQ. Notice there is no orchestrator worker anymore — the exchange handles fan-out natively.
+
+---
+
+## Phase 15: Durability and Decoupling
+
+Understand what happens when a service goes down.
+
+- [ ] Stop one consumer (e.g. the notification service)
+- [ ] Create several orders while it is down
+- [ ] Bring the consumer back up
+- [ ] Observe it processing the queued messages that accumulated while it was offline
+- [ ] Mark queues and messages as **durable** so they survive a RabbitMQ restart
+- [ ] Restart RabbitMQ and verify messages were not lost
+
+> Goal: understand why decoupling is a superpower. The order service didn't care that notification was down. Messages waited. This is not possible with a direct HTTP call.
+
+---
+
+## Phase 16: Exchange Types — RabbitMQ's Routing Superpower
+
+Learn how RabbitMQ routes messages differently based on exchange type.
+
+- [ ] **Direct Exchange** — route by exact routing key (you've been using this)
+- [ ] **Fanout Exchange** — broadcast to all bound queues, ignoring routing keys entirely
+  - Use case: broadcast `order.created` to every service without listing them
+- [ ] **Topic Exchange** — route by pattern matching on routing keys
+  - Example: `order.*` matches `order.created` and `order.cancelled`
+  - Example: `#.failed` matches `order.failed`, `payment.failed`, `email.failed`
+  - Use case: fine-grained event routing — a monitoring service subscribes to `*.failed`
+- [ ] Refactor your exchange to use **Topic** with routing keys like `order.created`, `order.cancelled`, `order.failed`
+- [ ] Add a dead letter consumer that subscribes to `#.failed`
+
+> Goal: Topic Exchange is the most powerful and most commonly used in production. Understanding routing keys makes RabbitMQ feel like a programmable message router.
+
+---
+
+## Phase 17: Retries and Dead Letter Queues in RabbitMQ
+
+RabbitMQ has no built-in retry mechanism like BullMQ. You implement it yourself using DLX (Dead Letter Exchange).
+
+- [ ] Create a dead letter exchange (`dlx`) and a dead letter queue (`failed-jobs`)
+- [ ] Configure a queue to forward rejected/expired messages to the DLX
+- [ ] In a consumer, `nack` a message (negative acknowledge) without requeue to trigger dead-lettering
+- [ ] Observe the message appear in the `failed-jobs` queue
+- [ ] Implement a retry pattern: use message `headers` to track attempt count, requeue with a delay up to N times before dead-lettering
+
+> Goal: understand the tradeoff — BullMQ gives you retries and backoff for free. RabbitMQ gives you flexibility to implement exactly the retry logic your use case needs.
+
+---
+
+## Phase 18: Deployment
+
+Containerize the full system and deploy it. This is where everything becomes real.
+
+- [ ] Write a `Dockerfile` for the API service
+- [ ] Write a `Dockerfile` for each worker/consumer service
+- [ ] Update `docker-compose.yml` to run all services together (API, all consumers, PostgreSQL, Redis, RabbitMQ)
+- [ ] Run the full system with a single `docker-compose up`
+- [ ] Learn the basics: pods, deployments, services, replica sets
+- [ ] Write a Kubernetes deployment manifest for one service
+- [ ] Scale a consumer horizontally with `kubectl scale`
+- [ ] Set up a CI/CD pipeline (GitHub Actions) to build and push Docker images on merge to `main`
+
+> Goal: "I built it" becomes "I shipped it". This is the single highest-leverage thing you can add to your profile for the 25-30 LPA bracket.
+
+---
+
+## Phase 19: Observability
+Make the system's health visible. You can't run something in production if you can't tell whether it's working.
+
+**Structured Logging**
+- [ ] Replace all `console.log` calls with a structured logger (`pino` recommended — fast, JSON output)
+- [ ] Ensure every log line includes `orderId`, `workerId`, `timestamp`, and `level` (info/warn/error)
+- [ ] Understand why plain `console.log` is not enough in production (no log levels, no queryable fields)
+
+**Metrics with Prometheus + Grafana**
+- [ ] Add `prom-client` to the API and workers
+- [ ] Expose a `GET /metrics` endpoint on the API
+- [ ] Track these metrics: orders created per second, queue consumer lag, worker error rate, job processing duration
+- [ ] Run Prometheus via Docker and point it at your `/metrics` endpoint
+- [ ] Run Grafana via Docker, connect it to Prometheus, and build a simple dashboard
+- [ ] Add Prometheus and Grafana to `docker-compose.yml`
+
+**Tracing (Optional but impressive)**
+- [ ] Learn what distributed tracing is — following a single request across API → RabbitMQ → email service → DB
+- [ ] Add OpenTelemetry SDK to the API
+- [ ] Propagate a `traceId` through message headers so all consumers log the same ID for a given order
+- [ ] Even without a full tracing backend, consistent `traceId` in logs is already a production pattern
+
+> Goal: answer "is the system healthy?" with data, not guesses. In interviews, being able to say "I instrumented my services with Prometheus and built dashboards in Grafana" is a strong differentiator at the senior level.
+
+---
+
+## Phase 20: Resiliency Patterns
+Production systems fail. These patterns are how you design for failure instead of being surprised by it.
+
+**Rate Limiting**
+- [ ] Add `express-rate-limit` to the API
+- [ ] Apply a limit to `POST /orders` (e.g. 100 requests per minute per IP)
+- [ ] Return a `429 Too Many Requests` response when the limit is exceeded
+- [ ] Understand why this protects both your API and your queue from being overwhelmed
+
+**Circuit Breakers**
+- [ ] Install `opossum` (standard Node.js circuit breaker library)
+- [ ] Wrap your RabbitMQ publish call in a circuit breaker
+- [ ] Configure: open after 5 failures, try again after 30 seconds
+- [ ] Simulate RabbitMQ being down — observe the circuit breaker open and the API returning a graceful error instead of hanging
+- [ ] Understand the three states: Closed (normal), Open (failing fast), Half-Open (testing recovery)
+
+> Goal: understand that resilient systems don't just retry — they stop trying when a dependency is down, fail fast, and recover gracefully. This is a pattern that comes up in every senior backend interview.
+
+---
+
+## Phase 21: Testing
+A project with no tests is not production-ready. This phase adds confidence that your system works as intended.
+
+**Unit Tests**
+- [ ] Install `jest` and `ts-jest`
+- [ ] Write unit tests for pure logic functions (e.g. `checkOrderCompletion`)
+- [ ] Mock Prisma client using `jest-mock-extended` or manual mocks
+
+**Integration Tests**
+- [ ] Install `supertest`
+- [ ] Write integration tests for `POST /orders` — assert status code, response shape, and that a job was enqueued
+- [ ] Write a test for `GET /orders/job/:jobId/progress`
+- [ ] Use an in-memory Redis or a test Redis instance for queue assertions
+
+**What to test in worker logic**
+- [ ] Test that idempotency checks prevent duplicate processing (call the worker twice with the same order, assert side effects happen once)
+- [ ] Test that the dead letter queue receives a job after all retries are exhausted
+
+> Goal: be able to say "my services have integration test coverage" in an interview. Also: tests will catch bugs during the RabbitMQ migration before you spend an hour debugging.
+
+---
+
+## Phase 22: Real-Time Progress (SSE)
+Replace polling with server-sent events for a cleaner, more production-realistic progress experience.
+
+- [ ] Understand the difference between polling, SSE, and WebSockets:
+  - Polling: client asks repeatedly "are you done yet?"
+  - SSE: server pushes updates to the client over a persistent HTTP connection (one-way)
+  - WebSockets: full duplex, both sides can send at any time
+- [ ] Replace `GET /orders/job/:jobId/progress` polling with a `GET /orders/job/:jobId/stream` SSE endpoint
+- [ ] From the worker, publish progress events to a Redis pub/sub channel
+- [ ] The SSE endpoint subscribes to that channel and streams updates to the client in real time
+- [ ] Build a minimal HTML page that connects to the SSE stream and shows live progress
+
+> Goal: understand that polling is a smell in production UIs. SSE is the right tool for unidirectional server-to-client updates like job progress, notifications, and live feeds.
+
+---
+
+## Concepts to Know (No Code Required)
+These are patterns and vocabulary you should be able to discuss in interviews. You've already implemented versions of them — knowing the names makes you sound senior.
+
+| Concept | What it is | Where you built it |
+|---|---|---|
+| **SAGA Pattern** | Managing distributed transactions across services with compensating actions on failure | Your order flow: email + pdf + analytics + warehouse must all complete; partial failure triggers status update |
+| **Eventual Consistency** | The system will be consistent, but not immediately — all services will process the event eventually | Your order status becomes COMPLETED only after all 4 sub-workers finish |
+| **Idempotency** | An operation that can be safely repeated without changing the result beyond the first execution | Your `emailSentAt` / `invoiceGeneratedAt` flags |
+| **Fan-Out** | One event triggers multiple independent downstream consumers | Your orchestrator enqueuing to 4 sub-queues |
+| **Dead Letter Queue** | A queue that captures messages that could not be processed after all retries | Your `dead-letter` queue |
+| **Circuit Breaker** | Stops calling a failing dependency and fails fast until it recovers | Phase 20 |
+| **Backpressure** | Slowing down producers when consumers can't keep up | Worker concurrency limits in Phase 10 |
+
+---
+
+## When to Use What
+
+| | BullMQ | RabbitMQ | Kafka |
+|---|---|---|---|
+| **Best for** | Background jobs, task queues | Service-to-service messaging | High-throughput event streaming |
+| **Mental model** | Task to be done | Event that happened | Ordered event log |
+| **Retries** | Built-in | Manual (DLX pattern) | Manual |
+| **Scaling** | Worker concurrency | Multiple consumers per queue | Consumer groups + partitions |
+| **When to reach for it** | Cron jobs, emails, PDF generation | Microservices communicating | Analytics pipelines, audit logs, 100k+ events/sec |

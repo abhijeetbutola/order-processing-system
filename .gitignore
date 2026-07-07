@@ -36,3 +36,6 @@ coverage/
 
 # Seed script
 *.sh
+
+# Personal notes
+UPSKILL_PLAN.md
