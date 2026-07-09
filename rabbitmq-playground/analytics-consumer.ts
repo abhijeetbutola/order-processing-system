@@ -5,8 +5,8 @@ async function main() {
   const channel = await connection.createChannel();
   const queue = 'analytics';
 
-  await channel.assertExchange('orders', 'direct', { durable: false });
-  await channel.assertQueue(queue, { durable: false });
+  await channel.assertExchange('orders', 'direct', { durable: true });
+  await channel.assertQueue(queue, { durable: true });
   await channel.bindQueue(queue, 'orders', 'order.created');
 
   console.log('[Analytics] Waiting for messages...');
