@@ -6,12 +6,9 @@ import { pdfQueue } from '@shared/queues/pdfQueue';
 import { analyticsQueue } from '@shared/queues/analyticsQueue';
 import { warehouseQueue } from '@shared/queues/warehouseQueue';
 import { notificationQueue } from '@shared/queues/notificationQueue';
+import { connection } from '@shared/queues/connection';
 
 const prisma = new PrismaClient();
-
-const connection = {
-  maxRetriesPerRequest: null,
-};
 
 const worker = new Worker(
   'order-processing',

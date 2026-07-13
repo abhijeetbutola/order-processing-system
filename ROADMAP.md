@@ -282,16 +282,46 @@ RabbitMQ has no built-in retry mechanism like BullMQ. You implement it yourself 
 
 Containerize the full system and deploy it. This is where everything becomes real.
 
-- [ ] Write a `Dockerfile` for the API service
-- [ ] Write a `Dockerfile` for each worker/consumer service
-- [ ] Update `docker-compose.yml` to run all services together (API, all consumers, PostgreSQL, Redis, RabbitMQ)
-- [ ] Run the full system with a single `docker-compose up`
-- [ ] Learn the basics: pods, deployments, services, replica sets
-- [ ] Write a Kubernetes deployment manifest for one service
-- [ ] Scale a consumer horizontally with `kubectl scale`
-- [ ] Set up a CI/CD pipeline (GitHub Actions) to build and push Docker images on merge to `main`
+### Docker
+- [x] Write a `Dockerfile` for the API service
+- [x] Write a `Dockerfile` for workers (one image, one compose service per worker)
+- [x] Update `docker-compose.yml` to run all services together (API, all workers, PostgreSQL, Redis, RabbitMQ)
+- [x] Automate DB schema with a one-shot `migrate` service (`prisma migrate deploy`) that runs before API/workers start
+- [x] Run the full system with a single `docker compose up --build`
+- [ ] Smoke-test: create an order via curl and confirm workers process it end-to-end
 
-> Goal: "I built it" becomes "I shipped it". This is the single highest-leverage thing you can add to your profile for the 25-30 LPA bracket.
+### Kubernetes
+- [ ] Learn the basics: pods, deployments, services, replica sets
+- [ ] Write a Kubernetes deployment manifest for one service (start with API)
+- [ ] Scale a worker horizontally with `kubectl scale`
+
+### CI/CD — GitHub Actions deploy pipeline
+Automate build + migrate + image publish on merge to `main` (Option B: migrate in the pipeline, not only at container start).
+
+- [ ] Create `.github/workflows/ci.yml` (or `deploy.yml`)
+- [ ] Trigger on push/PR to `main` (and optionally `deployment` branch)
+- [ ] Job 1 — **CI checks**
+  - [ ] Checkout repo
+  - [ ] Set up Node.js
+  - [ ] Install dependencies for `api` / `workers` / `prisma`
+  - [ ] Run lint/typecheck (when added)
+  - [ ] Run tests (Phase 21 — can be a placeholder job until then)
+- [ ] Job 2 — **Build Docker images**
+  - [ ] `docker build` for API (`api/Dockerfile`)
+  - [ ] `docker build` for workers (`workers/Dockerfile`)
+  - [ ] Tag images with git SHA + `latest` (e.g. `ghcr.io/<user>/order-api:<sha>`)
+- [ ] Job 3 — **Migrate (production-style)**
+  - [ ] Run `prisma migrate deploy` against a staging/prod DB URL from GitHub Secrets
+  - [ ] Or run migrate as a one-off container using the newly built API image
+  - [ ] Ensure migrations are never applied by multiple replicas racing — pipeline runs migrate **once**, then deploys
+- [ ] Job 4 — **Push images to a registry**
+  - [ ] Authenticate to GitHub Container Registry (`ghcr.io`) or Docker Hub
+  - [ ] Push API + worker images
+- [ ] (Later) Job 5 — **Deploy**
+  - [ ] SSH / cloud deploy / `kubectl set image` to roll out new tags
+  - [ ] Store secrets (`DATABASE_URL`, registry tokens) in GitHub Secrets — never commit them
+
+> Goal: "I built it" becomes "I shipped it". Pipeline story for interviews: build → migrate once → push images → deploy. This is the single highest-leverage thing you can add to your profile for the 25-30 LPA bracket.
 
 ---
 

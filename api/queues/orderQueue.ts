@@ -1,8 +1,5 @@
 import { Queue } from 'bullmq';
-
-export const connection = {
-  maxRetriesPerRequest: null,
-};
+import { connection } from '@shared/queues/connection';
 
 export const orderQueue = new Queue('order-processing', { connection,
   defaultJobOptions: {
