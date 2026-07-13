@@ -1,3 +1,22 @@
+# shared config for all workers (YAML anchor — must be defined before use)
+x-worker: &worker
+  build:
+    context: .
+    dockerfile: workers/Dockerfile
+  environment:
+    DATABASE_URL: postgresql://postgres:postgres@postgres:5432/order_processing
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_started
+    api:
+      condition: service_started
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -10,6 +29,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d order_processing"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -18,6 +42,68 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # One-shot: apply committed migrations, then exit (production-style)
+  migrate:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/order_processing
+    working_dir: /app/api
+    command: ["npx", "prisma", "migrate", "deploy", "--schema=../prisma/schema.prisma"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/order_processing
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  order-worker:
+    <<: *worker
+    command: ["node", "-r", "ts-node/register", "-r", "tsconfig-paths/register", "order.worker.ts"]
+
+  email-worker:
+    <<: *worker
+    command: ["node", "-r", "ts-node/register", "-r", "tsconfig-paths/register", "email.worker.ts"]
+
+  pdf-worker:
+    <<: *worker
+    command: ["node", "-r", "ts-node/register", "-r", "tsconfig-paths/register", "pdf.worker.ts"]
+
+  analytics-worker:
+    <<: *worker
+    command: ["node", "-r", "ts-node/register", "-r", "tsconfig-paths/register", "analytics.worker.ts"]
+
+  warehouse-worker:
+    <<: *worker
+    command: ["node", "-r", "ts-node/register", "-r", "tsconfig-paths/register", "warehouse.worker.ts"]
+
+  notification-worker:
+    <<: *worker
+    command: ["node", "-r", "ts-node/register", "-r", "tsconfig-paths/register", "notification.worker.ts"]
 
 volumes:
   postgres_data:
