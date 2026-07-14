@@ -36,19 +36,25 @@ jobs:
             api/package-lock.json
             workers/package-lock.json
             prisma/package-lock.json
+            shared/package-lock.json
 
       - name: Install api dependencies
         working-directory: api
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install workers dependencies
         working-directory: workers
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install prisma package dependencies
         working-directory: prisma
-        run: npm ci
+        run: npm ci --ignore-scripts
 
+      - name: Install shared package dependencies
+        working-directory: shared
+        run: npm ci --ignore-scripts
+
+      # Same pattern as Dockerfiles: skip postinstall, generate after all node_modules exist
       - name: Generate Prisma clients
         working-directory: api
         run: npx prisma generate --schema=../prisma/schema.prisma
@@ -85,12 +91,13 @@ jobs:
 
   # Option B: run migrate once in the pipeline against a throwaway DB
   # (not against production). Staging/prod would use secrets.DATABASE_URL instead.
-  # Skipped until repo secret CI_POSTGRES_PASSWORD is set (Settings → Secrets → Actions).
+  # Enable: Settings → Secrets and variables → Actions → Variables → ENABLE_CI_MIGRATE=true
+  # Also add secret CI_POSTGRES_PASSWORD (throwaway password for the ephemeral CI DB).
   migrate:
     name: Prisma migrate deploy (CI Postgres)
     runs-on: ubuntu-latest
     needs: checks
-    if: ${{ secrets.CI_POSTGRES_PASSWORD != '' }}
+    if: ${{ vars.ENABLE_CI_MIGRATE == 'true' }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -118,7 +125,7 @@ jobs:
 
       - name: Install api dependencies
         working-directory: api
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run prisma migrate deploy
         working-directory: api

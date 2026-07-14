@@ -39,6 +39,7 @@ coverage/
 
 # Personal notes
 UPSKILL_PLAN.md
+PHASE_18_NOTES.md
 
 # Local Kubernetes secrets (copy from secret.example.yaml)
 k8s/secret.yaml
