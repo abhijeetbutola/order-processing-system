@@ -36,19 +36,25 @@ jobs:
             api/package-lock.json
             workers/package-lock.json
             prisma/package-lock.json
+            shared/package-lock.json
 
       - name: Install api dependencies
         working-directory: api
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install workers dependencies
         working-directory: workers
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install prisma package dependencies
         working-directory: prisma
-        run: npm ci
+        run: npm ci --ignore-scripts
 
+      - name: Install shared package dependencies
+        working-directory: shared
+        run: npm ci --ignore-scripts
+
+      # Same pattern as Dockerfiles: skip postinstall, generate after all node_modules exist
       - name: Generate Prisma clients
         working-directory: api
         run: npx prisma generate --schema=../prisma/schema.prisma
@@ -119,7 +125,7 @@ jobs:
 
       - name: Install api dependencies
         working-directory: api
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run prisma migrate deploy
         working-directory: api
