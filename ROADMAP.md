@@ -288,38 +288,30 @@ Containerize the full system and deploy it. This is where everything becomes rea
 - [x] Update `docker-compose.yml` to run all services together (API, all workers, PostgreSQL, Redis, RabbitMQ)
 - [x] Automate DB schema with a one-shot `migrate` service (`prisma migrate deploy`) that runs before API/workers start
 - [x] Run the full system with a single `docker compose up --build`
-- [ ] Smoke-test: create an order via curl and confirm workers process it end-to-end
+- [x] Smoke-test: create an order via curl and confirm workers process it end-to-end
 
 ### Kubernetes
-- [ ] Learn the basics: pods, deployments, services, replica sets
-- [ ] Write a Kubernetes deployment manifest for one service (start with API)
-- [ ] Scale a worker horizontally with `kubectl scale`
+- [x] Learn the basics: pods, deployments, services, replica sets
+- [x] Write a Kubernetes deployment manifest for one service (start with API)
+- [x] Scale a worker horizontally with `kubectl scale`
+- [x] Add worker Deployments (session 3) and Secret-backed credentials
 
 ### CI/CD — GitHub Actions deploy pipeline
 Automate build + migrate + image publish on merge to `main` (Option B: migrate in the pipeline, not only at container start).
 
-- [ ] Create `.github/workflows/ci.yml` (or `deploy.yml`)
-- [ ] Trigger on push/PR to `main` (and optionally `deployment` branch)
-- [ ] Job 1 — **CI checks**
-  - [ ] Checkout repo
-  - [ ] Set up Node.js
-  - [ ] Install dependencies for `api` / `workers` / `prisma`
-  - [ ] Run lint/typecheck (when added)
-  - [ ] Run tests (Phase 21 — can be a placeholder job until then)
-- [ ] Job 2 — **Build Docker images**
-  - [ ] `docker build` for API (`api/Dockerfile`)
-  - [ ] `docker build` for workers (`workers/Dockerfile`)
-  - [ ] Tag images with git SHA + `latest` (e.g. `ghcr.io/<user>/order-api:<sha>`)
-- [ ] Job 3 — **Migrate (production-style)**
-  - [ ] Run `prisma migrate deploy` against a staging/prod DB URL from GitHub Secrets
-  - [ ] Or run migrate as a one-off container using the newly built API image
-  - [ ] Ensure migrations are never applied by multiple replicas racing — pipeline runs migrate **once**, then deploys
-- [ ] Job 4 — **Push images to a registry**
-  - [ ] Authenticate to GitHub Container Registry (`ghcr.io`) or Docker Hub
-  - [ ] Push API + worker images
-- [ ] (Later) Job 5 — **Deploy**
-  - [ ] SSH / cloud deploy / `kubectl set image` to roll out new tags
-  - [ ] Store secrets (`DATABASE_URL`, registry tokens) in GitHub Secrets — never commit them
+- [x] Create `.github/workflows/ci.yml`
+- [x] Trigger on push/PR to `main` and `deployment`
+- [x] Job 1 — **CI checks** (checkout, Node 20, install api/workers/prisma, prisma generate)
+- [ ] Job 1 extras — lint/typecheck/tests (Phase 21)
+- [x] Job 2 — **Build Docker images** (API + workers, Buildx + GHA cache)
+- [x] Job 3 — **Migrate (Option B)** against ephemeral CI Postgres via `prisma migrate deploy`
+  - [ ] Add repo secret `CI_POSTGRES_PASSWORD` (required for the migrate job)
+- [x] Job 4 — **Push images to GHCR** on push (`ghcr.io/<owner>/order-api` and `order-workers`)
+- [ ] Job 5 — **Deploy** (`kubectl set image` / cloud roll-out) — later
+
+> Setup: GitHub → repo → Settings → Secrets and variables → Actions → New repository secret  
+> Name: `CI_POSTGRES_PASSWORD` → any throwaway password for the CI-only Postgres service.  
+> Packages: after first push, make GHCR packages public or grant pull access for your cluster.
 
 > Goal: "I built it" becomes "I shipped it". Pipeline story for interviews: build → migrate once → push images → deploy. This is the single highest-leverage thing you can add to your profile for the 25-30 LPA bracket.
 
