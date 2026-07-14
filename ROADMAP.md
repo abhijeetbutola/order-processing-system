@@ -305,12 +305,14 @@ Automate build + migrate + image publish on merge to `main` (Option B: migrate i
 - [ ] Job 1 extras — lint/typecheck/tests (Phase 21)
 - [x] Job 2 — **Build Docker images** (API + workers, Buildx + GHA cache)
 - [x] Job 3 — **Migrate (Option B)** against ephemeral CI Postgres via `prisma migrate deploy`
-  - [ ] Add repo secret `CI_POSTGRES_PASSWORD` (required for the migrate job)
+  - [ ] Add Actions **variable** `ENABLE_CI_MIGRATE=true` (job gate — secrets cannot be used in `if:`)
+  - [ ] Add Actions **secret** `CI_POSTGRES_PASSWORD` (password for the ephemeral CI Postgres)
 - [x] Job 4 — **Push images to GHCR** on push (`ghcr.io/<owner>/order-api` and `order-workers`)
 - [ ] Job 5 — **Deploy** (`kubectl set image` / cloud roll-out) — later
 
-> Setup: GitHub → repo → Settings → Secrets and variables → Actions → New repository secret  
-> Name: `CI_POSTGRES_PASSWORD` → any throwaway password for the CI-only Postgres service.  
+> Setup (Actions):
+> 1. Settings → Secrets and variables → Actions → **Variables** → `ENABLE_CI_MIGRATE` = `true`
+> 2. Settings → Secrets and variables → Actions → **Secrets** → `CI_POSTGRES_PASSWORD` = any throwaway password  
 > Packages: after first push, make GHCR packages public or grant pull access for your cluster.
 
 > Goal: "I built it" becomes "I shipped it". Pipeline story for interviews: build → migrate once → push images → deploy. This is the single highest-leverage thing you can add to your profile for the 25-30 LPA bracket.
