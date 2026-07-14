@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pdf-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pdf-worker
+  template:
+    metadata:
+      labels:
+        app: pdf-worker
+    spec:
+      containers:
+        - name: pdf-worker
+          image: order-workers:latest
+          imagePullPolicy: IfNotPresent
+          workingDir: /app/workers
+          command:
+            - node
+            - -r
+            - ts-node/register
+            - -r
+            - tsconfig-paths/register
+            - pdf.worker.ts
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_URL
+            - name: REDIS_HOST
+              value: redis
+            - name: REDIS_PORT
+              value: "6379"
