@@ -145,6 +145,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Needed so ubuntu-latest (amd64) can build linux/arm64 for Apple Silicon / arm nodes
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -181,6 +185,7 @@ jobs:
           context: .
           file: api/Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
@@ -192,6 +197,7 @@ jobs:
           context: .
           file: workers/Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta-workers.outputs.tags }}
           labels: ${{ steps.meta-workers.outputs.labels }}
           cache-from: type=gha
